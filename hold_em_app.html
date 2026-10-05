@@ -1,0 +1,805 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1E5B44">
+<title>Mesa de Hold'em</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#E9EEE9; --surface:#FFFFFF; --ink:#13201A; --muted:#5A6A61; --line:#D2DBD4;
+  --felt:#1E5B44; --felt-ink:#F3F6F1; --chip:#C3342C; --chip-edge:#F5EFE3; --brass:#A97C22;
+  --turn:#FFF4D6; --danger:#B3261E;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0D1C16; --surface:#14281F; --ink:#ECF0E8; --muted:#94A79C; --line:#25392F;
+    --felt:#2F7C5B; --felt-ink:#F3F6F1; --chip:#DD5148; --chip-edge:#1B3328; --brass:#D6A94A;
+    --turn:#2B3A22; --danger:#F2867E;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0D1C16; --surface:#14281F; --ink:#ECF0E8; --muted:#94A79C; --line:#25392F;
+  --felt:#2F7C5B; --felt-ink:#F3F6F1; --chip:#DD5148; --chip-edge:#1B3328; --brass:#D6A94A;
+  --turn:#2B3A22; --danger:#F2867E;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);
+  font-family:"Bricolage Grotesque",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  font-size:16px;line-height:1.45;-webkit-font-smoothing:antialiased}
+.wrap{max-width:560px;margin:0 auto;padding:16px 16px 140px}
+h1,h2,h3{margin:0;line-height:1.1}
+h1{font-size:2.1rem;font-weight:800;letter-spacing:-.02em}
+h2{font-size:1.3rem;font-weight:800}
+p{margin:.4em 0}
+.muted{color:var(--muted)}
+.num{font-variant-numeric:tabular-nums}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
+button:focus-visible,input:focus-visible{outline:3px solid var(--brass);outline-offset:2px}
+input{font:inherit;color:var(--ink);background:var(--surface);border:1.5px solid var(--line);border-radius:10px;padding:12px;width:100%}
+label{display:block;font-size:.9rem;color:var(--muted);margin:12px 0 4px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:13px 18px;border-radius:12px;font-weight:600;background:var(--surface);border:1.5px solid var(--line);min-height:48px}
+.btn.primary{background:var(--felt);color:var(--felt-ink);border-color:var(--felt)}
+.btn.chip{background:var(--chip);color:#fff;border-color:var(--chip)}
+.btn.ghost{background:transparent}
+.btn.danger{color:var(--danger);border-color:var(--danger);background:transparent}
+.btn.full{width:100%}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.err{background:color-mix(in srgb,var(--danger) 14%,transparent);color:var(--danger);padding:10px 12px;border-radius:10px;margin:12px 0;font-weight:600}
+
+/* home */
+.brand{padding:28px 0 8px}
+.mark{width:56px;height:56px;border-radius:50%;display:grid;place-items:center;font-size:28px;color:#fff;
+  background:radial-gradient(circle,var(--chip) 0 52%,transparent 53%),repeating-conic-gradient(var(--chip) 0 22.5deg,var(--chip-edge) 22.5deg 45deg);margin-bottom:16px}
+.lede{color:var(--muted);max-width:40ch}
+.tabs{display:flex;gap:6px;margin:22px 0 4px;background:var(--surface);border:1.5px solid var(--line);border-radius:12px;padding:4px}
+.tabs button{flex:1;padding:10px;border-radius:9px;font-weight:600;color:var(--muted)}
+.tabs button[aria-selected="true"]{background:var(--felt);color:var(--felt-ink)}
+.row{display:flex;gap:10px}
+.row>*{flex:1}
+
+/* top bar */
+.top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px}
+.code{font-weight:800;letter-spacing:.12em;background:var(--surface);border:1.5px solid var(--line);border-radius:999px;padding:6px 12px;font-size:.95rem}
+.status{font-size:.95rem;color:var(--muted)}
+
+/* pot chip */
+.pot{display:grid;place-items:center;margin:14px auto 8px;width:176px;height:176px;border-radius:50%;
+  background:repeating-conic-gradient(var(--chip) 0 15deg,var(--chip-edge) 15deg 30deg)}
+.pot-in{width:144px;height:144px;border-radius:50%;background:var(--surface);display:grid;place-items:center;text-align:center;
+  box-shadow:inset 0 0 0 3px var(--chip)}
+.pot-in b{display:block;font-size:2.6rem;font-weight:800;line-height:1;letter-spacing:-.02em}
+.pot-in span{font-size:.85rem;color:var(--muted)}
+.street{text-align:center;font-weight:600}
+.turnline{text-align:center;margin:6px 0 14px;color:var(--muted)}
+.turnline b{color:var(--ink)}
+
+/* seats */
+.seats{list-style:none;padding:0;margin:0;background:var(--surface);border:1.5px solid var(--line);border-radius:14px;overflow:hidden}
+.seat{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:11px 14px;border-top:1px solid var(--line)}
+.seat:first-child{border-top:0}
+.seat.turn{background:var(--turn);box-shadow:inset 4px 0 0 var(--brass)}
+.seat.fold{opacity:.5}
+.seat .nm{font-weight:600;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.seat .stk{text-align:right;font-weight:800;font-size:1.1rem}
+.seat .sub{font-size:.85rem;color:var(--muted)}
+.seat .sub.r{text-align:right}
+.tag{font-size:.72rem;font-weight:800;border-radius:6px;padding:2px 6px;background:var(--line);color:var(--ink)}
+.tag.btn-d{background:var(--ink);color:var(--bg)}
+.tag.ai{background:var(--chip);color:#fff}
+.tag.me{background:transparent;border:1.5px solid var(--muted);color:var(--muted)}
+.total{font-size:.82rem;color:var(--muted);text-align:center;margin:10px 0}
+
+/* panels */
+.panel{background:var(--surface);border:1.5px solid var(--line);border-radius:14px;padding:16px;margin:14px 0}
+.panel h3{font-size:1.05rem;margin-bottom:8px}
+.pick{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 4px}
+.pick button{padding:10px 14px;border-radius:999px;border:1.5px solid var(--line);font-weight:600;background:var(--bg)}
+.pick button[aria-pressed="true"]{background:var(--felt);color:var(--felt-ink);border-color:var(--felt)}
+.log{list-style:none;padding:0;margin:0;font-size:.9rem;color:var(--muted)}
+.log li{padding:3px 0}
+.log li:last-child{color:var(--ink);font-weight:600}
+
+/* action dock */
+.dock{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1.5px solid var(--line);
+  padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));z-index:5}
+.dock-in{max-width:560px;margin:0 auto}
+.dock .who{font-size:.85rem;color:var(--muted);margin-bottom:8px}
+.acts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.raise{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.raise .val{flex:1;text-align:center;font-weight:800;font-size:1.4rem}
+.raise .step{width:48px;height:48px;border-radius:12px;border:1.5px solid var(--line);font-size:1.4rem;font-weight:800}
+.presets{display:flex;gap:6px;margin-bottom:8px}
+.presets button{flex:1;padding:8px;border-radius:10px;border:1.5px solid var(--line);font-size:.85rem;font-weight:600}
+
+/* lobby */
+.lob{list-style:none;padding:0;margin:0}
+.lob li{display:flex;align-items:center;gap:6px;padding:10px 0;border-top:1px solid var(--line)}
+.lob li:first-child{border-top:0}
+.lob .pos{width:22px;color:var(--muted);font-weight:600}
+.lob .n{flex:1;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.ico{width:40px;height:40px;border-radius:10px;border:1.5px solid var(--line);font-weight:800}
+.ico.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.bigcode{font-size:3rem;font-weight:800;letter-spacing:.18em;text-align:center;margin:6px 0}
+
+/* sheet */
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:9;display:flex;align-items:flex-end}
+.sheet{width:100%;max-width:560px;margin:0 auto;background:var(--surface);border-radius:18px 18px 0 0;
+  padding:18px 16px calc(18px + env(safe-area-inset-bottom,0px));display:grid;gap:10px;max-height:85%;overflow:auto}
+.switch{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 0}
+.switch button{width:54px;height:32px;border-radius:999px;background:var(--line);position:relative}
+.switch button::after{content:"";position:absolute;top:4px;left:4px;width:24px;height:24px;border-radius:50%;background:var(--surface);transition:left .15s}
+.switch button[aria-pressed="true"]{background:var(--felt)}
+.switch button[aria-pressed="true"]::after{left:26px}
+table{width:100%;border-collapse:collapse}
+td,th{padding:10px 6px;border-top:1px solid var(--line);text-align:left}
+th{font-size:.85rem;color:var(--muted);font-weight:600;border-top:0}
+td.r,th.r{text-align:right}
+.center{text-align:center}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
+.net{font-size:.88rem;color:var(--brass);font-weight:600;margin:4px 0 8px;text-align:center}
+.net.ok{color:var(--muted);font-weight:400}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+</head>
+<body>
+<div id="app"><main class="wrap"><p class="muted" style="padding-top:40px">Abriendo la mesa…</p></main></div>
+<script>
+(function(){
+"use strict";
+const app=document.getElementById('app');
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function ls(k,v){try{
+  if(v===undefined){const r=localStorage.getItem(k);return r?JSON.parse(r):null;}
+  if(v===null)localStorage.removeItem(k);else localStorage.setItem(k,JSON.stringify(v));
+}catch(e){return null;}}
+let deviceId=ls('hm_device');
+if(!deviceId){deviceId='d'+Math.random().toString(36).slice(2,10);ls('hm_device',deviceId);}
+let state=null,session=ls('hm_session');
+const ui={view:'',tab:'create',err:'',menu:false,raiseTo:0,raiseKey:'',winners:{},confirmEnd:false,busy:false,net:'',peers:0,toast:'',prefill:''};
+const STREET={preflop:'Preflop',flop:'Flop',turn:'Turn',river:'River',showdown:'Showdown',done:'Mano terminada'};
+const NEXT={preflop:'flop',flop:'turn',turn:'river'};
+/* ---------- helpers ---------- */
+const nm=(s,p)=>(s.players[p]&&s.players[p].name)||'?';
+function log(s,m){s.log=s.log||[];s.log.push(m);if(s.log.length>40)s.log.splice(0,s.log.length-40);}
+function pushUndo(s){
+  s.undo=(s.undo||[]).slice(-9);
+  s.undo.push(JSON.stringify({players:s.players,hand:s.hand,buttonPid:s.buttonPid,handNo:s.handNo,log:s.log,seats:s.seats,status:s.status}));
+}
+function popUndo(s){
+  if(!s.undo||!s.undo.length)return false;
+  const o=JSON.parse(s.undo.pop());Object.assign(s,o);return true;
+}
+function nextOf(s,from,pred){
+  const n=s.seats.length;let i=s.seats.indexOf(from);
+  for(let k=1;k<=n;k++){const p=s.seats[((i+k)%n+n)%n];if(pred(p))return p;}
+  return null;
+}
+function liveSeats(s){return s.seats.filter(p=>s.players[p]&&!s.players[p].out&&s.players[p].stack>0);}
+function potOf(h){return h?Object.values(h.players).reduce((a,x)=>a+x.total,0):0;}
+function totalChips(s){let t=0;for(const p in s.players)t+=s.players[p].stack;if(s.hand&&s.hand.street!=='done'){t+=potOf(s.hand);if(s.hand.paid)for(const p in s.hand.paid)t-=s.hand.paid[p];}return t;}
+function expectedChips(s){let t=0;for(const p in s.players)t+=s.players[p].buyins*s.startStack;return t;}
+
+/* ---------- poker engine ---------- */
+function put(s,p,amt){
+  const pl=s.players[p],hp=s.hand.players[p];
+  const a=Math.max(0,Math.min(amt,pl.stack));
+  pl.stack-=a;hp.bet+=a;hp.total+=a;if(pl.stack===0)hp.allIn=true;return a;
+}
+function findNext(s,from){
+  const h=s.hand;
+  return nextOf(s,from,p=>{const x=h.players[p];return x&&!x.folded&&!x.allIn&&(!x.acted||x.bet<h.currentBet);});
+}
+function startHand(s){
+  const live=liveSeats(s);
+  if(live.length<2){ui.err='Se necesitan al menos 2 jugadores con fichas.';return false;}
+  pushUndo(s);
+  let btn;
+  if(s.handNo===0)btn=live.includes(s.buttonPid)?s.buttonPid:nextOf(s,s.buttonPid,p=>live.includes(p));
+  else btn=nextOf(s,s.buttonPid,p=>live.includes(p));
+  const players={};live.forEach(p=>players[p]={folded:false,allIn:false,bet:0,total:0,acted:false});
+  const isLive=p=>!!players[p];
+  const heads=live.length===2;
+  const sbP=heads?btn:nextOf(s,btn,isLive);
+  const bbP=nextOf(s,sbP,isLive);
+  s.handNo++;s.buttonPid=btn;
+  s.hand={no:s.handNo,btn,sbP,bbP,street:'preflop',players,currentBet:s.bb,minRaise:s.bb,toAct:null,pots:null,paid:{}};
+  put(s,sbP,s.sb);put(s,bbP,s.bb);
+  log(s,`Mano ${s.handNo}: botón ${nm(s,btn)}. Ciegas ${nm(s,sbP)} (${s.sb}) y ${nm(s,bbP)} (${s.bb}).`);
+  const nx=findNext(s,bbP);
+  if(nx)s.hand.toAct=nx;else endStreet(s);
+  return true;
+}
+function act(s,pid,type,amount){
+  const h=s.hand;if(!h||h.toAct!==pid)return false;
+  const hp=h.players[pid],pl=s.players[pid],who=nm(s,pid);
+  const toCall=Math.max(0,h.currentBet-hp.bet);
+  const max=hp.bet+pl.stack;
+  let to=0;
+  if(type==='check'&&toCall>0){ui.err=`${who} no puede pasar: debe ${toCall}.`;return false;}
+  if(type==='raise'){
+    to=Math.min(amount,max);
+    if(to<max&&to<h.currentBet+h.minRaise){ui.err=`La subida mínima es a ${h.currentBet+h.minRaise}.`;return false;}
+  }
+  pushUndo(s);
+  if(type==='fold'){hp.folded=true;log(s,`${who} se retira.`);}
+  else if(type==='check'){log(s,`${who} pasa.`);}
+  else if(type==='call'){const a=put(s,pid,toCall);log(s,hp.allIn?`${who} paga ${a} y queda all-in.`:`${who} paga ${a}.`);}
+  else{
+    if(type==='allin')to=max;
+    const before=h.currentBet;
+    put(s,pid,to-hp.bet);
+    if(to>before){
+      const inc=to-before;
+      if(inc>=h.minRaise)h.minRaise=inc;
+      h.currentBet=to;
+      for(const p in h.players)if(p!==pid)h.players[p].acted=false;
+      if(hp.allIn)log(s,`${who} va all-in con ${to}.`);
+      else log(s,before===0?`${who} apuesta ${to}.`:`${who} sube a ${to}.`);
+    }else log(s,`${who} va all-in con ${to}.`);
+  }
+  hp.acted=true;
+  progress(s,pid);
+  return true;
+}
+function progress(s,last){
+  const h=s.hand;
+  const alive=Object.keys(h.players).filter(p=>!h.players[p].folded);
+  if(alive.length===1)return awardAll(s,alive[0]);
+  const nx=findNext(s,last);
+  if(nx){h.toAct=nx;return;}
+  endStreet(s);
+}
+function endStreet(s){
+  const h=s.hand;
+  for(const p in h.players){h.players[p].bet=0;h.players[p].acted=false;}
+  h.currentBet=0;h.minRaise=s.bb;h.toAct=null;
+  const canAct=Object.values(h.players).filter(x=>!x.folded&&!x.allIn).length;
+  if(h.street==='river'||canAct<=1){
+    if(h.street!=='river'){h.runout=true;log(s,'No quedan apuestas posibles: repartan las cartas que faltan.');}
+    return showdown(s);
+  }
+  h.street=NEXT[h.street];
+  log(s,`${STREET[h.street]}: repartan en la mesa.`);
+  h.toAct=findNext(s,h.btn);
+}
+function buildPots(h){
+  const e=Object.entries(h.players);
+  const alive=e.filter(([,x])=>!x.folded);
+  const levels=[...new Set(alive.map(([,x])=>x.total))].sort((a,b)=>a-b);
+  let prev=0;const pots=[];
+  levels.forEach((L,i)=>{
+    let amt=0;
+    e.forEach(([,x])=>{amt+=Math.max(0,Math.min(x.total,L)-prev);});
+    if(i===levels.length-1)e.forEach(([,x])=>{amt+=Math.max(0,x.total-L);});
+    const elig=alive.filter(([,x])=>x.total>=L).map(([p])=>p);
+    if(amt>0)pots.push({amount:amt,eligible:elig});
+    prev=L;
+  });
+  const m=[];
+  pots.forEach(pt=>{const l=m[m.length-1];if(l&&l.eligible.join()===pt.eligible.join())l.amount+=pt.amount;else m.push({...pt});});
+  return m;
+}
+function showdown(s){
+  const h=s.hand;h.street='showdown';h.toAct=null;
+  const open=[];
+  buildPots(h).forEach(pt=>{
+    if(pt.eligible.length===1){
+      const p=pt.eligible[0];s.players[p].stack+=pt.amount;h.paid[p]=(h.paid[p]||0)+pt.amount;
+      log(s,`${nm(s,p)} recupera ${pt.amount} que nadie igualó.`);
+    }else open.push(pt);
+  });
+  h.pots=open;
+  if(!open.length)finishHand(s);
+  else log(s,'Showdown: elijan quién gana.');
+}
+function awardAll(s,p){
+  const h=s.hand,t=potOf(h);
+  s.players[p].stack+=t;
+  log(s,`${nm(s,p)} gana ${t}; los demás se retiraron.`);
+  finishHand(s);
+}
+function awardPots(s,winnersByPot){
+  const h=s.hand;
+  const order=[];let cur=h.btn;
+  for(let i=0;i<s.seats.length;i++){cur=nextOf(s,cur,()=>true);order.push(cur);}
+  pushUndo(s);
+  h.pots.forEach((pt,i)=>{
+    const w=(winnersByPot[i]||[]).slice().sort((a,b)=>order.indexOf(a)-order.indexOf(b));
+    const share=Math.floor(pt.amount/w.length);let rem=pt.amount-share*w.length;
+    w.forEach(p=>{const g=share+(rem>0?1:0);if(rem>0)rem--;s.players[p].stack+=g;});
+    const label=h.pots.length>1?(i===0?'el bote principal':`el bote secundario ${i}`):'el bote';
+    log(s,w.length===1?`${nm(s,w[0])} gana ${label} de ${pt.amount}.`:`${w.map(p=>nm(s,p)).join(' y ')} reparten ${label} de ${pt.amount}.`);
+  });
+  finishHand(s);
+}
+function finishHand(s){
+  const h=s.hand;h.street='done';h.toAct=null;h.pots=null;
+  h.busted=Object.keys(h.players).filter(p=>s.players[p].stack===0);
+  h.busted.forEach(p=>log(s,`${nm(s,p)} se quedó sin fichas.`));
+}
+function cancelHand(s){
+  const h=s.hand;if(!h||h.street==='done')return;
+  for(const p in h.players)s.players[p].stack+=h.players[p].total-(h.paid[p]||0);
+  log(s,`La mano ${h.no} se anuló y se devolvieron las fichas.`);
+  s.hand=null;
+}
+
+
+/* ---------- vistas reutilizadas ---------- */
+function val(id){const el=document.getElementById(id);return el?el.value:'';}
+function errBox(){return ui.err?`<div class="err" role="alert">${esc(ui.err)}</div>`:'';}
+
+function seatList(){
+  const s=state,h=s.hand;
+  return `<ul class="seats">${s.seats.map(p=>{
+    const pl=s.players[p];if(!pl)return'';
+    const x=h&&h.players[p];
+    const tags=[];
+    if(h&&h.btn===p)tags.push('<span class="tag btn-d">B</span>');
+    if(h&&h.street!=='done'){if(h.sbP===p)tags.push('<span class="tag">CP</span>');if(h.bbP===p)tags.push('<span class="tag">CG</span>');}
+    if(x&&x.allIn&&!x.folded)tags.push('<span class="tag ai">All-in</span>');
+    if(p===deviceId)tags.push('<span class="tag me">tú</span>');
+    let sub='';
+    if(pl.out)sub='Fuera';
+    else if(!x)sub=pl.stack===0?'Sin fichas':'Entra en la próxima mano';
+    else if(x.folded)sub='Se retiró';
+    else if(h.street==='done')sub='';
+    else if(h.toAct===p)sub='Le toca';
+    else sub=x.acted?'Ya habló':'';
+    const bet=x&&x.bet&&h.street!=='done'?`Puso ${x.bet}`:'';
+    const cls=['seat'];if(h&&h.toAct===p)cls.push('turn');if((x&&x.folded)||pl.out)cls.push('fold');
+    return `<li class="${cls.join(' ')}">
+      <span class="nm">${esc(pl.name)} ${tags.join('')}</span><span class="stk num">${pl.stack}</span>
+      <span class="sub">${sub}</span><span class="sub r num">${bet}</span></li>`;
+  }).join('')}</ul>`;
+}
+
+function vDock(p){
+  const s=state,h=s.hand,x=h.players[p],pl=s.players[p];
+  const toCall=Math.max(0,h.currentBet-x.bet);
+  const max=x.bet+pl.stack;
+  const minTo=Math.min(h.currentBet+h.minRaise,max);
+  const key=`${h.no}-${h.street}-${p}-${h.currentBet}`;
+  if(ui.raiseKey!==key){ui.raiseKey=key;ui.raiseTo=minTo;}
+  ui.raiseTo=Math.max(minTo,Math.min(ui.raiseTo,max));
+  const canRaise=max>h.currentBet&&pl.stack>toCall;
+  const pot=potOf(h)+toCall;
+  const verb=h.currentBet===0?'Apostar':'Subir a';
+  const callLbl=toCall===0?'Pasar':(pl.stack<=toCall?`All-in ${pl.stack}`:`Pagar ${toCall}`);
+  return `<div class="dock"><div class="dock-in">
+    <div class="who">${p===deviceId?'Tu turno':`Actuando por <b>${esc(pl.name)}</b>`} · tiene ${pl.stack}</div>
+    ${canRaise&&max>minTo?`
+      <div class="presets">
+        <button data-act="preset" data-v="${minTo}">Mínimo</button>
+        <button data-act="preset" data-v="${Math.round(h.currentBet+pot/2)}">½ bote</button>
+        <button data-act="preset" data-v="${Math.round(h.currentBet+pot)}">Bote</button>
+      </div>
+      <div class="raise">
+        <button class="step" data-act="minus" aria-label="Menos">−</button>
+        <span class="val num">${ui.raiseTo}</span>
+        <button class="step" data-act="plus" aria-label="Más">+</button>
+      </div>`:''}
+    <div class="acts">
+      <button class="btn" data-act="do" data-t="fold">Retirarse</button>
+      <button class="btn" data-act="do" data-t="${toCall===0?'check':'call'}">${callLbl}</button>
+      ${canRaise&&max>minTo?`<button class="btn primary" data-act="do" data-t="raise">${verb} ${ui.raiseTo}</button>`:''}
+      ${canRaise?`<button class="btn chip" data-act="do" data-t="allin" ${!(max>minTo)?'style="grid-column:span 2"':''}>All-in ${max}</button>`:''}
+    </div>
+  </div></div>`;
+}
+
+function vShowdown(dealer){
+  const s=state,h=s.hand;
+  if(!dealer)return `<div class="panel"><h3>Showdown</h3><p class="muted">Muestren las cartas. El crupier marca quién gana.</p></div>`;
+  return `<div class="panel"><h3>¿Quién gana?</h3>${h.runout?'<p class="muted" style="font-size:.9rem">Repartan las cartas que faltan antes de decidir.</p>':''}
+    ${h.pots.map((pt,i)=>{const w=ui.winners[i]||[];return `<p style="margin-top:10px"><b>${h.pots.length>1?(i===0?'Bote principal':'Bote secundario '+i):'Bote'}: <span class="num">${pt.amount}</span></b></p>
+      <div class="pick">${pt.eligible.map(p=>`<button aria-pressed="${w.includes(p)}" data-act="win" data-i="${i}" data-p="${p}">${esc(nm(s,p))}</button>`).join('')}</div>`;}).join('')}
+    <p class="muted" style="font-size:.85rem">Marca a más de uno si hay empate y se reparte.</p>
+    <button class="btn primary full" data-act="award" ${h.pots.every((_,i)=>(ui.winners[i]||[]).length)?'':'disabled'}>Repartir bote</button>
+  </div>`;
+}
+
+function vDone(dealer){
+  const s=state,h=s.hand;
+  const broke=s.seats.filter(p=>s.players[p]&&s.players[p].stack===0&&!s.players[p].out);
+  return `<div class="panel"><h3>Mano ${h.no} terminada</h3>
+    ${broke.length?broke.map(p=>`<div class="row" style="align-items:center;margin-top:8px"><span><b>${esc(nm(s,p))}</b> sin fichas</span>
+      ${dealer?`<button class="btn" data-act="rebuy" data-p="${p}" style="flex:0 0 auto">Recompra ${s.startStack}</button><button class="btn ghost" data-act="out" data-p="${p}" style="flex:0 0 auto">Fuera</button>`:''}</div>`).join(''):''}
+    ${dealer?`<button class="btn primary full" data-act="nexthand" style="margin-top:12px">Siguiente mano</button>`:'<p class="muted">Esperando la siguiente mano.</p>'}
+  </div>`;
+}
+
+function vEnded(){
+  const s=state;
+  const rows=s.seats.filter(p=>s.players[p]).map(p=>{const pl=s.players[p];return{p,name:pl.name,stack:pl.stack,net:pl.stack-pl.buyins*s.startStack};}).sort((a,b)=>b.stack-a.stack);
+  const win=rows[0];
+  return `<main class="wrap">
+    <div class="brand"><div class="mark" aria-hidden="true">♠</div><h1>${win?esc(win.name)+' gana la partida':'Partida terminada'}</h1>
+    <p class="lede">${s.handNo} manos jugadas. La mesa ${esc(s.code)} quedó cerrada.</p></div>
+    <div class="panel"><table><thead><tr><th>Jugador</th><th class="r">Fichas</th><th class="r">Resultado</th></tr></thead><tbody>
+      ${rows.map((r,i)=>`<tr><td>${i+1}. ${esc(r.name)}</td><td class="r num">${r.stack}</td><td class="r num">${r.net>0?'+':''}${r.net}</td></tr>`).join('')}
+    </tbody></table></div>
+    <button class="btn primary full" data-act="leave">Salir de la mesa</button>
+  </main>`;
+}
+
+/* ---------- red entre teléfonos (PeerJS / WebRTC) ---------- */
+const PFX='mesa-holdem-v1-';
+let peer=null,role=null,hostConn=null,retryT=null,gen=0,wakeLock=null;
+const conns=new Map();
+function iAmDealer(){return role==='host';}
+function retry(fn,ms){clearTimeout(retryT);retryT=setTimeout(fn,ms);}
+function killPeer(){gen++;clearTimeout(retryT);if(peer){try{peer.destroy();}catch(e){}}peer=null;hostConn=null;conns.clear();ui.peers=0;}
+async function keepAwake(){
+  try{if('wakeLock' in navigator&&document.visibilityState==='visible'&&!wakeLock){wakeLock=await navigator.wakeLock.request('screen');wakeLock.addEventListener('release',()=>{wakeLock=null;});}}catch(e){}
+}
+function publicState(){const p=Object.assign({},state);delete p.undo;p.undoCount=(state.undo||[]).length;return p;}
+function sendTo(c,msg){try{if(c&&c.open)c.send(msg);}catch(e){}}
+function broadcast(){const msg={t:'state',state:publicState()};conns.forEach(r=>sendTo(r.conn,msg));}
+function commit(s){
+  s.updatedAt=Date.now();state=s;ls('hm_state_'+s.code,s);broadcast();render();
+}
+
+/* --- anfitrión (crupier) --- */
+function hostOpen(code,fresh){
+  killPeer();const g=gen;role='host';
+  ui.net='Abriendo la mesa…';render();
+  peer=new Peer(PFX+code);
+  peer.on('open',()=>{if(g!==gen)return;ui.net='';ui.busy=false;
+    if(fresh){session={role:'host',code,pid:deviceId};ls('hm_session',session);commit(state);}
+    render();keepAwake();});
+  peer.on('connection',c=>{
+    if(g!==gen)return;
+    c.on('open',()=>{if(g!==gen)return;conns.set(c.peer,{conn:c,pid:null});ui.peers=conns.size;render();});
+    c.on('data',m=>{if(g===gen)onHostMsg(c,m);});
+    c.on('close',()=>{if(g!==gen)return;conns.delete(c.peer);ui.peers=conns.size;render();});
+    c.on('error',()=>{});
+  });
+  peer.on('disconnected',()=>{if(g!==gen)return;ui.net='Reconectando al servidor…';render();
+    retry(()=>{if(g===gen&&peer&&!peer.destroyed){try{peer.reconnect();}catch(e){hostOpen(code,false);}}},1500);});
+  peer.on('error',err=>{
+    if(g!==gen)return;
+    if(err.type==='unavailable-id'){
+      if(fresh){state.code=genCode();return hostOpen(state.code,true);}
+      ui.net='La mesa sigue abierta en otra pestaña. Reintentando…';render();return retry(()=>hostOpen(code,false),4000);
+    }
+    if(err.type==='browser-incompatible'){ui.err='Este navegador no permite conectar teléfonos. Prueba con Chrome o Safari actualizados.';ui.busy=false;render();return;}
+    if(err.type==='peer-unavailable')return; // un jugador que ya no está
+    ui.net='Sin conexión con el servidor. Reintentando…';render();retry(()=>hostOpen(code,fresh),4000);
+  });
+}
+function onHostMsg(c,m){
+  if(!m||typeof m!=='object'||!state)return;
+  let rec=conns.get(c.peer);if(!rec){rec={conn:c,pid:null};conns.set(c.peer,rec);}
+  if(m.t==='hello'){
+    const pid=String(m.pid||'').replace(/[^\w-]/g,'').slice(0,40);
+    const name=String(m.name||'').trim().slice(0,20)||'Jugador';
+    if(!pid)return;
+    rec.pid=pid;
+    if(!state.players[pid]&&!(state.kicked||[]).includes(pid)){
+      const s=structuredClone(state);
+      if(s.status==='lobby'){s.players[pid]={name,stack:s.startStack,buyins:1,out:false};s.seats.push(pid);commit(s);}
+      else if(s.status==='playing'&&!(s.pending&&s.pending[pid])){s.pending=s.pending||{};s.pending[pid]=name;commit(s);}
+    }
+    sendTo(c,{t:'state',state:publicState()});
+    return;
+  }
+  if(m.t==='cmd'&&rec.pid){const r=runCmd(rec.pid,false,m.cmd||{});if(r&&r.err)sendTo(c,{t:'err',msg:r.err});}
+}
+const HOST_ONLY=['setbtn','move','kick','addp','startgame','nexthand','award','rebuy','out','seat','undo'];
+function runCmd(actor,isHost,cmd){
+  if(!state)return{err:'La mesa no está lista.'};
+  if(HOST_ONLY.includes(cmd.c)&&!isHost)return{err:'Solo el crupier puede hacer eso.'};
+  const saved=ui.err;ui.err='';
+  const s=structuredClone(state);const p=cmd.p;let err='';
+  const ok=(()=>{switch(cmd.c){
+    case 'act':{const h=s.hand;if(!h||!h.toAct||h.street==='done'||h.street==='showdown')return false;
+      if(h.toAct!==actor&&!isHost){err='Todavía no es tu turno.';return false;}
+      return act(s,h.toAct,String(cmd.type),parseInt(cmd.amount,10)||0);}
+    case 'setbtn':if(!s.players[p])return false;s.buttonPid=p;return true;
+    case 'move':{const i=s.seats.indexOf(p),j=cmd.dir==='up'?i-1:i+1;if(i<0||j<0||j>=s.seats.length)return false;[s.seats[i],s.seats[j]]=[s.seats[j],s.seats[i]];return true;}
+    case 'kick':if(p===s.hostId)return false;s.seats=s.seats.filter(x=>x!==p);delete s.players[p];s.kicked=(s.kicked||[]).concat(p);if(s.buttonPid===p)s.buttonPid=s.seats[0];return true;
+    case 'addp':{const n=String(cmd.name||'').trim().slice(0,20);if(!n)return false;const id='m'+Math.random().toString(36).slice(2,9);s.players[id]={name:n,stack:s.startStack,buyins:1,out:false};s.seats.push(id);if(s.status==='playing')log(s,`${n} se sienta con ${s.startStack}.`);return true;}
+    case 'startgame':if(s.status!=='lobby')return false;s.status='playing';s.log=[];log(s,`Empieza la partida: ${s.seats.map(x=>nm(s,x)).join(', ')}.`);return startHand(s);
+    case 'nexthand':if(s.hand&&s.hand.street!=='done')return false;return startHand(s);
+    case 'award':if(!s.hand||!s.hand.pots)return false;
+      if(!s.hand.pots.every((pt,i)=>Array.isArray(cmd.winners[i])&&cmd.winners[i].length&&cmd.winners[i].every(w=>pt.eligible.includes(w)))){err='Elige un ganador para cada bote.';return false;}
+      awardPots(s,cmd.winners);return true;
+    case 'rebuy':if(!s.players[p])return false;pushUndo(s);s.players[p].stack+=s.startStack;s.players[p].buyins++;s.players[p].out=false;log(s,`${nm(s,p)} hace recompra de ${s.startStack}.`);return true;
+    case 'out':if(!s.players[p])return false;s.players[p].out=true;log(s,`${nm(s,p)} queda fuera de la partida.`);return true;
+    case 'seat':{const n=s.pending&&s.pending[p];if(!n||s.players[p])return false;delete s.pending[p];
+      s.players[p]={name:n,stack:s.startStack,buyins:1,out:false};
+      const bi=s.seats.indexOf(s.buttonPid);s.seats.splice(bi<0?s.seats.length:bi,0,p);log(s,`${n} se sienta con ${s.startStack}.`);return true;}
+    case 'undo':if(!popUndo(s)){err='No hay nada que deshacer.';return false;}return true;
+    case 'endgame':if(s.status==='ended')return false;cancelHand(s);s.hand=null;s.status='ended';s.endedAt=Date.now();
+      log(s,isHost?'Partida terminada.':`${nm(s,actor)} terminó la partida.`);return true;
+  }return false;})();
+  const msg=err||ui.err;
+  if(isHost)ui.err=ok===false?msg:'';else ui.err=saved;
+  if(ok===false){render();return{err:msg||'No se pudo hacer eso.'};}
+  commit(s);
+}
+
+/* --- jugador --- */
+function clientConnect(code,name,first){
+  killPeer();const g=gen;role='client';
+  ui.net=first?'Buscando la mesa…':'Reconectando con el crupier…';render();
+  peer=new Peer();
+  peer.on('open',()=>{
+    if(g!==gen)return;
+    const c=peer.connect(PFX+code,{reliable:true});hostConn=c;
+    c.on('open',()=>{if(g===gen)sendTo(c,{t:'hello',pid:deviceId,name});});
+    c.on('data',m=>{
+      if(g!==gen||!m)return;
+      if(m.t==='state'){
+        state=m.state;ui.net='';ui.busy=false;ui.view='game';
+        if(!session){session={role:'client',code,pid:deviceId,name};ls('hm_session',session);keepAwake();}
+        render();
+      }else if(m.t==='err'){ui.err=String(m.msg||'');render();}
+    });
+    c.on('close',()=>{if(g!==gen||!session)return;ui.net='Se perdió la conexión con el crupier. Reconectando…';render();retry(()=>clientConnect(code,name,false),2500);});
+  });
+  peer.on('error',err=>{
+    if(g!==gen)return;
+    if(!session){
+      ui.busy=false;ui.net='';
+      ui.err=err.type==='peer-unavailable'?`No encuentro la mesa ${code}. Revisa el código y que el crupier tenga la app abierta.`:
+        err.type==='browser-incompatible'?'Este navegador no permite conectar teléfonos.':'No se pudo conectar. Revisa tu internet.';
+      killPeer();role=null;render();return;
+    }
+    ui.net=err.type==='peer-unavailable'?'El teléfono del crupier no está conectado. Reintentando…':'Sin conexión. Reintentando…';
+    render();retry(()=>clientConnect(code,name,false),4000);
+  });
+}
+function send(cmd){
+  if(role==='host')return runCmd(deviceId,true,cmd);
+  if(hostConn&&hostConn.open)sendTo(hostConn,{t:'cmd',cmd});
+  else{ui.err='Sin conexión con el crupier. Espera a que se reconecte.';render();}
+}
+
+/* --- crear / unirse / salir --- */
+function genCode(){const a='ABCDEFGHJKLMNPQRSTUVWXYZ';let c='';for(let i=0;i<4;i++)c+=a[Math.floor(Math.random()*a.length)];return c;}
+function createGame(){
+  const name=val('f-name').trim(),stack=parseInt(val('f-stack'),10),bb=parseInt(val('f-bb'),10);
+  if(!name){ui.err='Escribe tu nombre.';return render();}
+  if(!(stack>0)||!(bb>1)){ui.err='Revisa las fichas iniciales y la ciega grande.';return render();}
+  ui.err='';ui.busy=true;
+  state={code:genCode(),status:'lobby',hostId:deviceId,sb:Math.floor(bb/2),bb,startStack:stack,
+    seats:[deviceId],players:{[deviceId]:{name,stack,buyins:1,out:false}},buttonPid:deviceId,handNo:0,hand:null,log:[],undo:[],pending:{},kicked:[],createdAt:Date.now()};
+  hostOpen(state.code,true);
+}
+function joinGame(){
+  const code=val('f-code').trim().toUpperCase(),name=val('f-jname').trim();
+  if(!/^[A-Z]{4}$/.test(code)){ui.err='El código tiene 4 letras.';return render();}
+  if(!name){ui.err='Escribe tu nombre.';return render();}
+  ui.err='';ui.busy=true;session=null;clientConnect(code,name,true);
+}
+function leave(){
+  if(role==='host'&&state)ls('hm_state_'+state.code,null);
+  killPeer();role=null;ls('hm_session',null);session=null;state=null;ui.menu=false;ui.view='home';ui.err='';ui.net='';
+  if(wakeLock){try{wakeLock.release();}catch(e){}wakeLock=null;}
+  render();
+}
+function shareLink(){return location.origin+location.pathname+'?mesa='+(state?state.code:'');}
+async function share(){
+  const url=shareLink();
+  try{if(navigator.share){await navigator.share({title:"Mesa de Hold'em",text:`Únete a la mesa ${state.code}`,url});return;}}catch(e){return;}
+  try{await navigator.clipboard.writeText(url);ui.toast='Enlace copiado';}catch(e){ui.toast=url;}
+  render();setTimeout(()=>{ui.toast='';render();},2500);
+}
+
+/* ---------- vistas ---------- */
+function netLine(){
+  if(ui.net)return `<p class="net">${esc(ui.net)}</p>`;
+  if(role==='host')return `<p class="net ok">${ui.peers===1?'1 teléfono conectado':ui.peers+' teléfonos conectados'}</p>`;
+  return '';
+}
+function vHome(){
+  const create=ui.tab==='create';
+  return `<main class="wrap">
+  <header class="brand"><div class="mark" aria-hidden="true">♠</div>
+    <h1>Mesa de Hold'em</h1>
+    <p class="lede">Cada jugador lleva sus fichas en su teléfono. Ustedes reparten las cartas de verdad; la mesa lleva ciegas, turnos y botes.</p>
+  </header>
+  <div class="tabs" role="tablist">
+    <button role="tab" aria-selected="${create}" data-act="tab" data-v="create">Crear mesa</button>
+    <button role="tab" aria-selected="${!create}" data-act="tab" data-v="join">Unirme</button>
+  </div>
+  ${create?`
+    <label for="f-name">Tu nombre</label><input id="f-name" autocomplete="nickname" maxlength="20">
+    <div class="row">
+      <div><label for="f-stack">Fichas iniciales</label><input id="f-stack" inputmode="numeric" value="500"></div>
+      <div><label for="f-bb">Ciega grande</label><input id="f-bb" inputmode="numeric" value="10"></div>
+    </div>
+    <p class="muted" style="font-size:.88rem">Serás el crupier. Tu teléfono hace de mesa: déjalo con la app abierta mientras juegan.</p>
+    ${errBox()}${ui.net?`<p class="net">${esc(ui.net)}</p>`:''}
+    <button class="btn primary full" data-act="create" ${ui.busy?'disabled':''} style="margin-top:12px">Crear mesa</button>
+  `:`
+    <label for="f-code">Código de la mesa</label><input id="f-code" maxlength="4" autocapitalize="characters" value="${esc(ui.prefill||'')}" style="letter-spacing:.2em;font-weight:800;text-transform:uppercase">
+    <label for="f-jname">Tu nombre</label><input id="f-jname" autocomplete="nickname" maxlength="20">
+    ${errBox()}${ui.net?`<p class="net">${esc(ui.net)}</p>`:''}
+    <button class="btn primary full" data-act="join" ${ui.busy?'disabled':''} style="margin-top:16px">Entrar a la mesa</button>
+  `}
+  </main>`;
+}
+function vLobby(){
+  const s=state,host=role==='host';
+  const items=s.seats.map((p,i)=>`<li>
+    <span class="pos num">${i+1}</span>
+    <span class="n">${esc(nm(s,p))}${p===deviceId?' <span class="tag me">tú</span>':''}</span>
+    ${host?`<button class="ico ${s.buttonPid===p?'on':''}" data-act="setbtn" data-p="${p}" aria-label="Dar el botón a ${esc(nm(s,p))}">B</button>
+      <button class="ico" data-act="up" data-p="${p}" aria-label="Subir" ${i===0?'disabled':''}>↑</button>
+      <button class="ico" data-act="down" data-p="${p}" aria-label="Bajar" ${i===s.seats.length-1?'disabled':''}>↓</button>
+      ${p!==deviceId?`<button class="ico" data-act="kick" data-p="${p}" aria-label="Quitar">✕</button>`:''}`
+      :(s.buttonPid===p?'<span class="tag btn-d">Botón</span>':'')}
+  </li>`).join('');
+  return `<main class="wrap">
+    <div class="top"><span class="status">Sala de espera</span><button class="btn ghost" data-act="menu">Menú</button></div>
+    ${netLine()}
+    <div class="panel center">
+      <p class="muted">Código de la mesa</p>
+      <div class="bigcode">${esc(s.code)}</div>
+      ${host?`<p class="muted" style="font-size:.9rem">Comparte el enlace. Cada jugador entra una sola vez con su nombre.</p>
+      <button class="btn full" data-act="share">Compartir enlace</button>${ui.toast?`<p class="muted" style="font-size:.85rem;word-break:break-all">${esc(ui.toast)}</p>`:''}`:''}
+    </div>
+    <div class="panel">
+      <h3>Orden de la mesa</h3>
+      <p class="muted" style="font-size:.9rem">${host?'Ordena según cómo están sentados, en el sentido del juego. Toca B para dar el botón de la primera mano.':'El crupier está acomodando la mesa.'}</p>
+      <ul class="lob">${items}</ul>
+      ${host?`<div class="row" style="margin-top:10px"><input id="f-add" placeholder="Jugador sin teléfono" maxlength="20"><button class="btn" data-act="addp" style="flex:0 0 auto">Agregar</button></div>`:''}
+    </div>
+    <p class="muted center num">${s.startStack} fichas por jugador · ciegas ${s.sb}/${s.bb}</p>
+    ${errBox()}
+    ${host?`<button class="btn primary full" data-act="startgame" ${s.seats.length<2?'disabled':''}>Empezar partida</button>`
+      :`<p class="center"><b>Listo. Esperando a que el crupier empiece.</b></p>`}
+  </main>${vMenu()}`;
+}
+function vGame(){
+  const s=state,h=s.hand,dealer=iAmDealer();
+  const pending=Object.entries(s.pending||{});
+  const meSeated=!!s.players[deviceId];
+  let center='',dock='',panel='';
+  const pot=h&&h.street!=='done'?potOf(h)-Object.values(h.paid||{}).reduce((a,b)=>a+b,0):0;
+  if(!h){
+    center=`<p class="street">Partida lista</p>`;
+    panel=dealer?`<button class="btn primary full" data-act="nexthand">Empezar mano ${s.handNo+1}</button>`:`<p class="center muted">Esperando a que el crupier reparta.</p>`;
+  }else{
+    const toAct=h.toAct;
+    center=`<div class="pot"><div class="pot-in"><div><b class="num">${pot}</b><span>bote</span></div></div></div>
+      <p class="street">Mano ${h.no} · ${STREET[h.street]}</p>
+      ${toAct?`<p class="turnline">Le toca a <b>${esc(nm(s,toAct))}</b>${h.currentBet-h.players[toAct].bet>0?` · debe ${h.currentBet-h.players[toAct].bet}`:''}</p>`:''}`;
+    if(toAct&&(toAct===deviceId||dealer))dock=vDock(toAct);
+    if(h.street==='showdown'&&h.pots)panel=vShowdown(dealer);
+    if(h.street==='done')panel=vDone(dealer);
+  }
+  if(!meSeated)panel=`<div class="panel"><h3>Ya estás conectado</h3><p class="muted">El crupier te sentará en la mesa desde su teléfono.</p></div>`+panel;
+  const pend=dealer&&pending.length?`<div class="panel"><h3>Quieren sentarse</h3>${pending.map(([id,n])=>`<div class="row" style="align-items:center;margin-top:6px"><span><b>${esc(n)}</b></span><button class="btn" data-act="seat" data-p="${esc(id)}" style="flex:0 0 auto">Sentar con ${s.startStack}</button></div>`).join('')}<p class="muted" style="font-size:.85rem">Se sienta justo antes del botón y entra en la próxima mano.</p></div>`:'';
+  const tc=totalChips(s),ex=expectedChips(s);
+  const recent=(s.log||[]).slice(-6);
+  return `<main class="wrap">
+    <div class="top"><span class="code">${esc(s.code)}</span><span class="status num">Ciegas ${s.sb}/${s.bb}</span><button class="btn ghost" data-act="menu">Menú</button></div>
+    ${netLine()}
+    ${center}
+    ${errBox()}
+    ${panel}
+    ${pend}
+    ${seatList()}
+    <p class="total num">${tc===ex?`Fichas en juego: ${tc} ✓`:`Fichas en juego: ${tc} de ${ex}`}</p>
+    ${recent.length?`<div class="panel"><h3>Lo último</h3><ul class="log">${recent.map(l=>`<li>${esc(l)}</li>`).join('')}</ul></div>`:''}
+  </main>${dock}${vMenu()}`;
+}
+function vMenu(){
+  if(!ui.menu)return'';
+  const s=state,host=role==='host';
+  const undoN=host?(s.undo||[]).length:0;
+  return `<div class="scrim" data-act="closemenu"><div class="sheet" data-stop="1" role="dialog" aria-label="Menú">
+    <h2>Mesa ${esc(s.code)}</h2>
+    <p class="muted" style="font-size:.9rem">${host?'Eres el crupier: tu teléfono es la mesa. Mantén la app abierta mientras juegan; si se cierra, al volver a abrirla la mesa sigue donde quedó.':'Estás conectado al teléfono del crupier.'}</p>
+    ${host&&s.status!=='lobby'?`<button class="btn full" data-act="share">Compartir enlace de la mesa</button>`:''}
+    ${host&&s.status==='playing'?`<button class="btn full" data-act="undo" ${undoN?'':'disabled'}>Deshacer la última acción</button>`:''}
+    ${ui.confirmEnd?`<div class="panel" style="margin:0"><p><b>¿Terminar la partida para todos?</b></p><p class="muted" style="font-size:.9rem">${s.hand&&s.hand.street!=='done'?'La mano en curso se anula y se devuelven las fichas. ':''}Todos verán la clasificación final.</p>
+      <div class="row"><button class="btn" data-act="cancelend">Seguir jugando</button><button class="btn danger" data-act="endgame">Terminar</button></div></div>`
+      :`<button class="btn danger full" data-act="askend">Terminar partida</button>`}
+    ${host?'':`<button class="btn ghost full" data-act="leave">Desconectar este teléfono</button>`}
+    <button class="btn full" data-act="closemenu">Cerrar</button>
+  </div></div>`;
+}
+
+/* ---------- render ---------- */
+function render(){
+  const a=document.activeElement;
+  const keep={};document.querySelectorAll('input[id]').forEach(i=>keep[i.id]=i.value);
+  const fid=a&&a.id&&a.tagName==='INPUT'?a.id:null;
+  let html;
+  if(ui.view==='nopeer')html=`<main class="wrap"><div class="brand"><div class="mark">♠</div><h1>Mesa de Hold'em</h1>
+    <p class="lede">No se pudo cargar el módulo de conexión. Revisa tu internet y recarga la página.</p></div></main>`;
+  else if(!state&&session)html=`<main class="wrap"><div class="brand"><div class="mark">♠</div><h1>Mesa ${esc(session.code)}</h1></div>
+    <p class="net">${esc(ui.net||'Conectando con la mesa…')}</p>${errBox()}
+    <button class="btn ghost full" data-act="leave" style="margin-top:20px">Salir de esta mesa</button></main>`;
+  else if(!state)html=vHome();
+  else if(state.status==='lobby')html=vLobby();
+  else if(state.status==='ended')html=vEnded();
+  else html=vGame();
+  app.innerHTML=html;
+  for(const id in keep){const el=document.getElementById(id);if(el)el.value=keep[id];}
+  if(fid){const el=document.getElementById(fid);if(el){el.focus();try{el.setSelectionRange(el.value.length,el.value.length);}catch(e){}}}
+}
+
+/* ---------- eventos ---------- */
+app.addEventListener('click',ev=>{
+  const t=ev.target.closest('[data-act]');
+  if(!t)return;
+  if(t.dataset.act==='closemenu'&&ev.target.closest('[data-stop]')&&ev.target!==t)return;
+  const a=t.dataset.act,p=t.dataset.p;
+  keepAwake();
+  switch(a){
+    case 'tab':ui.tab=t.dataset.v;ui.err='';render();break;
+    case 'create':createGame();break;
+    case 'join':joinGame();break;
+    case 'share':share();break;
+    case 'menu':ui.menu=true;ui.confirmEnd=false;render();break;
+    case 'closemenu':ui.menu=false;render();break;
+    case 'leave':leave();break;
+    case 'askend':ui.confirmEnd=true;render();break;
+    case 'cancelend':ui.confirmEnd=false;render();break;
+    case 'endgame':ui.menu=false;send({c:'endgame'});render();break;
+    case 'undo':ui.menu=false;ui.winners={};send({c:'undo'});break;
+    case 'setbtn':send({c:'setbtn',p});break;
+    case 'up':case 'down':send({c:'move',p,dir:a});break;
+    case 'kick':send({c:'kick',p});break;
+    case 'addp':{const n=val('f-add').trim();if(!n)return;const el=document.getElementById('f-add');if(el)el.value='';send({c:'addp',name:n});break;}
+    case 'startgame':send({c:'startgame'});break;
+    case 'nexthand':ui.winners={};send({c:'nexthand'});break;
+    case 'do':{const h=state&&state.hand;if(!h||!h.toAct)return;if(h.toAct!==deviceId&&!iAmDealer())return;
+      ui.err='';send({c:'act',type:t.dataset.t,amount:ui.raiseTo});break;}
+    case 'preset':ui.raiseTo=parseInt(t.dataset.v,10);render();break;
+    case 'plus':ui.raiseTo+=state.bb;render();break;
+    case 'minus':ui.raiseTo-=state.bb;render();break;
+    case 'win':{const i=+t.dataset.i;const w=ui.winners[i]||[];ui.winners[i]=w.includes(p)?w.filter(x=>x!==p):w.concat(p);render();break;}
+    case 'award':{const w=ui.winners;ui.winners={};send({c:'award',winners:w});break;}
+    case 'rebuy':send({c:'rebuy',p});break;
+    case 'out':send({c:'out',p});break;
+    case 'seat':send({c:'seat',p});break;
+  }
+});
+app.addEventListener('keydown',ev=>{
+  if(ev.key!=='Enter')return;
+  const id=ev.target.id;
+  if(id==='f-add'){ev.preventDefault();app.querySelector('[data-act="addp"]')?.click();}
+  if(id==='f-name'||id==='f-stack'||id==='f-bb'){ev.preventDefault();createGame();}
+  if(id==='f-code'||id==='f-jname'){ev.preventDefault();joinGame();}
+});
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState!=='visible'||!session)return;
+  keepAwake();
+  if(role==='host'){if(!peer||peer.destroyed)hostOpen(session.code,false);else if(peer.disconnected){try{peer.reconnect();}catch(e){hostOpen(session.code,false);}}}
+  else if(role==='client'&&!(hostConn&&hostConn.open))clientConnect(session.code,session.name,false);
+});
+
+/* ---------- arranque ---------- */
+(function boot(){
+  const q=new URLSearchParams(location.search);
+  const urlCode=(q.get('mesa')||'').toUpperCase().replace(/[^A-Z]/g,'').slice(0,4);
+  if(typeof Peer==='undefined'){ui.view='nopeer';return render();}
+  if(session&&session.role==='host'){
+    const saved=ls('hm_state_'+session.code);
+    if(saved){state=saved;hostOpen(session.code,false);return;}
+    ls('hm_session',null);session=null;
+  }
+  if(session&&session.role==='client'){clientConnect(session.code,session.name,false);return;}
+  if(urlCode){ui.tab='join';ui.prefill=urlCode;}
+  render();
+})();
+
+})();
+</script>
+</body>
+</html>
